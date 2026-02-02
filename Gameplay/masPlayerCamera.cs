@@ -31,9 +31,9 @@ public partial class masPlayerCamera : Node
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // INPUT FUNCTIONS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //private void OnCameraYaw(float Value)   { InputCameraYaw   = ( Value != 0.0f ) ? Value : 0.0f; }
-    //private void OnCameraPitch(float Value) { InputCameraPitch = ( Value != 0.0f ) ? Value : 0.0f; }
-    //private void OnCameraMoveX(float Value) { InputCameraMoveX = ( Value != 0.0f ) ? Value : 0.0f; }
+    private void OnCameraYaw(float Value)   { InputCameraYaw   = ( Value != 0.0f ) ? Value : 0.0f; }
+    private void OnCameraPitch(float Value) { InputCameraPitch = ( Value != 0.0f ) ? Value : 0.0f; }
+    private void OnCameraMoveX(float Value) { InputCameraMoveX = ( Value != 0.0f ) ? Value : 0.0f; }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -43,13 +43,13 @@ public partial class masPlayerCamera : Node
     {
         base._Ready();
 
-        //InputComponent = new masInputComponent("PlayerCamera_InputComponent", false);
-        //InputComponent.AddAxis("OnCameraYaw",   new masInputAxisEvent(JoyAxis.RightX, -1.0f), OnCameraYaw);
-        //InputComponent.AddAxis("OnCameraPitch", new masInputAxisEvent(JoyAxis.RightY, -1.0f), OnCameraPitch);
-        //InputComponent.AddAxis("OnCameraMoveX", new masInputAxisEvent(JoyAxis.LeftX,  -1.0f), OnCameraMoveX);
+        masInputComponent InputComponent = new masInputComponent("PlayerCamera_InputComponent", false);
+        InputComponent.AddAxis("OnCameraYaw",   new masInputAxisEvent(JoyAxis.RightX, -1.0f), OnCameraYaw);
+        InputComponent.AddAxis("OnCameraPitch", new masInputAxisEvent(JoyAxis.RightY, -1.0f), OnCameraPitch);
+        InputComponent.AddAxis("OnCameraMoveX", new masInputAxisEvent(JoyAxis.LeftX,  -1.0f), OnCameraMoveX);
 
-        //masInputController PlayerController = masInput.GetInputController(masInputPlayerID.Player_0);
-        //PlayerController.AddInputComponent(InputComponent);
+        masInputController PlayerController = masInput.GetInputController(masInputPlayerID.Player_0);
+        PlayerController.AddInputComponent(InputComponent);
     }
     
     public override void _Process(double delta)

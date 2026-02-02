@@ -1,0 +1,87 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Godot;
+
+public partial class masAnimationController : Node
+{
+    [Export] private AnimationTree       AnimTree;
+    [Export] private masPlayerMovement   MovementComp;
+    [Export] private masPlayerController PlayerController;
+    
+
+    ///////////////////////////////////////////
+    private AnimationNodeStateMachinePlayback LocomotionFSM;
+    private AnimationNodeStateMachinePlayback MovementFSM;
+    private AnimationNodeStateMachinePlayback JumpFSM;
+
+    ///////////////////////////////////////////
+    private bool  IsOnSprint = false;
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    private void OnVelocityChange(Vector3 InVelocity) 
+    { 
+        float VelocityLength = InVelocity.Length();
+        if(VelocityLength != 0f)
+        {
+            if(IsOnSprint)
+                MovementFSM.Travel("Sprint");
+            else
+                MovementFSM.Travel("Walk");
+        }
+        else
+            MovementFSM.Travel("Idle");
+    }
+
+    private void OnSprint(bool IsSprinting)           
+    { 
+        IsOnSprint = IsSprinting; 
+    }
+
+    private void OnJumpStart()
+    {
+        LocomotionFSM.Travel("JumpFSM");
+    }
+
+    private void OnJumpFinish()
+    {
+        JumpFSM.Travel("Jump_Land");
+        
+        Callable FinishJump = Callable.From((StringName StateName) =>
+        {
+            masDebug.Log(StateName, Colors.Cyan, 20f);
+            if(StateName == "Jump_Land")
+                MovementComp.OnJumpEnd();
+        });
+
+        if(!JumpFSM.IsConnected(AnimationNodeStateMachinePlayback.SignalName.StateFinished, FinishJump))
+            JumpFSM.Connect(AnimationNodeStateMachinePlayback.SignalName.StateFinished, FinishJump, (uint)ConnectFlags.Persist);
+    }
+    
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    public override void _Ready()
+    {
+        LocomotionFSM = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/playback");
+        MovementFSM   = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/MovementFSM/playback");
+        JumpFSM       = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/JumpFSM/playback");
+
+        MovementComp.OnJumpStart  += OnJumpStart;
+        MovementComp.OnJumpFinish += OnJumpFinish;
+
+        PlayerController.OnMoveInput   += OnVelocityChange;
+        PlayerController.OnSprintInput += OnSprint;
+        //PlayerController.OnStepBackInput ;
+        //PlayerController.OnRollInput     ;
+    }
+
+    public override void _Process(double delta)
+    {
+
+    }
+}

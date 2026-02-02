@@ -1,63 +1,107 @@
-
 using Godot;
 
 public partial class masPlayerController : Node
 {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Input Events
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    [Signal] public delegate void OnMoveInputEventHandler(Vector3 Velocity);
+    [Signal] public delegate void OnSprintInputEventHandler(bool IsSprinting);
+    [Signal] public delegate void OnJumpInputEventHandler();
+    [Signal] public delegate void OnStepBackInputEventHandler();
+    [Signal] public delegate void OnRollInputEventHandler();
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private masPlayerEventQueue PlayerEventQueue; // 
-    private Node3D              CameraRoot;       // current used camera by the player
+    private Vector3 Velocity             = Vector3.Zero;
+    private float   StartRunThreshold   = 1f;
+    private float   StartRunAccumulator = 0f; 
+    private float   ElapsedTime         = 0f;
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // MOVEMENT/MOTION INPUTS
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void OnMoveForward(float Value)     { if(Value != 0f) PlayerEventQueue.AddEvent("MOVE_FORWARD"); }
-    private void OnMoveRight(float Value)       { if(Value != 0f) PlayerEventQueue.AddEvent("MOVE_RIGHT");   }
-    private void OnBeginRun(float Value)        { if(Value != 0f) PlayerEventQueue.AddEvent("DODGE_OR_STEPBACK_OR_RUN"); }
-    private void OnEndRun()                     { }
-	private void OnCrouch()                     { PlayerEventQueue.AddEvent("CROUCH"); }
-	private void OnJump()                       { PlayerEventQueue.AddEvent("JUMP");   }
+    private void MoveForward(float Value)
+    {
+        Velocity.Z = Value;
+        EmitSignal(SignalName.OnMoveInput, Velocity);
+    }
+
+    private void MoveRight(float Value)
+    {
+        Velocity.X = Value; 
+        EmitSignal(SignalName.OnMoveInput, Velocity);
+    }
+
+    private void OnBeginRun(float Value)
+    {
+        StartRunAccumulator += Value * ElapsedTime;
+        if(StartRunAccumulator >= StartRunThreshold)
+            EmitSignal(SignalName.OnSprintInput, true);
+
+        if(Velocity.Length() == 0.0f)
+            EmitSignal(SignalName.OnStepBackInput);
+    }
+
+    private void OnEndRun()
+    {
+        if(StartRunAccumulator >= StartRunThreshold)
+        {
+            StartRunAccumulator = 0f;
+            EmitSignal(SignalName.OnSprintInput, false);
+        }
+        else
+            EmitSignal(SignalName.OnRollInput);
+    }
+
+	private void OnJump()
+    {
+        EmitSignal(SignalName.OnJumpInput);
+    }
+
+	private void OnCrouch()                     { }
     private void OnStepBack()                   { }
     private void OnDodge()                      { }
-    private void OnToggleLock()                 { PlayerEventQueue.AddEvent("TOGGLE_LOCK"); }   
+    private void OnToggleLock()                 { }  
 
     
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // CHANING ITEMS / EQUIPMENTS
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-	private void OnChangeItem()               { PlayerEventQueue.AddEvent("CHANGE_CONSUMABLE_ITEM");      }
-	private void OnChangeLeftHandEquipment()  { PlayerEventQueue.AddEvent("CHANGE_LEFT_EQUIPMENT");  }
-	private void OnChangeRightHandEquipment() { PlayerEventQueue.AddEvent("CHANGE_RIGHT_EQUIPMENT"); }
-	private void OnChangeAbilityItem()        { PlayerEventQueue.AddEvent("CHANGE_ABILITY_ITEM");         }   
+	private void OnChangeItem()               { }
+	private void OnChangeLeftHandEquipment()  { }
+	private void OnChangeRightHandEquipment() { }
+	private void OnChangeAbilityItem()        { }   
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // USING CURRENT ITEMS / EQUIPMENTS
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void OnRightHandAction()                   { PlayerEventQueue.AddEvent("RIGHT_EQUIPMENT_ACTION");         }
-	private void OnLeftHandAction()                    { PlayerEventQueue.AddEvent("LEFT_EQUIPMENT_ACTION");          }
-    private void OnRightHandSpecialAction(float Value) { if(Value != 0f) PlayerEventQueue.AddEvent("RIGHT_EQUIPMENT_SPECIAL_ACTION"); }
-    private void OnLeftHandSpecialAction(float Value)  { if(Value != 0f) PlayerEventQueue.AddEvent("LEFT_EQUIPMENT_SPECIAL_ACTION");  }
-	private void OnUseItem()                           { PlayerEventQueue.AddEvent("USE_CONSUMABLEE_ITEM");           }
+    private void OnRightHandAction()                   { }
+	private void OnLeftHandAction()                    { }
+    private void OnRightHandSpecialAction(float Value) { }
+    private void OnLeftHandSpecialAction(float Value)  { }
+	private void OnUseItem()                           { }
     
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ACCESSING MENU, IN GAME SUBMENU, HUD, AND MAPS
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void OnToggleMenu()                        { PlayerEventQueue.AddEvent("TOGGLE_MAIN_MENU"); }
-	private void OnToggleMap()                         { PlayerEventQueue.AddEvent("TOGGLE_MAP");       }
-    private void OnToggleHUD()                         { PlayerEventQueue.AddEvent("SHOW_HUD");         }
-    private void OnToggleSubHUD(float Value)           { if(Value != 0f) PlayerEventQueue.AddEvent("SHOW_SUB_HUD");     }
+    private void OnToggleMenu()                        { }
+	private void OnToggleMap()                         { }
+    private void OnToggleHUD()                         { }
+    private void OnToggleSubHUD(float Value)           { }
 
     
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // FOR USING CAMERA
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void OnCameraRotateY(float Value)   { if(Value != 0f) PlayerEventQueue.AddEvent("CAMERA_ROTATE_Y");  } 
-    private void OnCameraRotateX(float Value)   { if(Value != 0f) PlayerEventQueue.AddEvent("CAMERA_ROTATE_X");  } 
-    private void OnCameraMoveRight(float Value) { if(Value != 0f) PlayerEventQueue.AddEvent("CAMERA_MOVE_RIGHT");}
+    private void OnCameraRotateY(float Value)   { } 
+    private void OnCameraRotateX(float Value)   { } 
+    private void OnCameraMoveRight(float Value) { }
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,14 +109,12 @@ public partial class masPlayerController : Node
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     public override void _Ready()
     {
-        PlayerEventQueue = GetNode<masPlayerEventQueue>("masPlayerEventQueue");
-        
         //
         masInputComponent PlayerInputComponent = new masInputComponent("PlayerInputComponent",    false);
 
         // Register Axes
-		PlayerInputComponent.AddAxis("MoveForward",            new masInputAxisEvent(JoyAxis.LeftY, -1.0f),     OnMoveForward);
-		PlayerInputComponent.AddAxis("MoveRight",              new masInputAxisEvent(JoyAxis.LeftX, -1.0f),     OnMoveRight);
+		PlayerInputComponent.AddAxis("MoveForward",            new masInputAxisEvent(JoyAxis.LeftY, -1.0f),     MoveForward);
+		PlayerInputComponent.AddAxis("MoveRight",              new masInputAxisEvent(JoyAxis.LeftX, -1.0f),     MoveRight);
 		PlayerInputComponent.AddAxis("BeginRun",               new masInputAxisEvent(JoyButton.B,    1.0f),     OnBeginRun);
         PlayerInputComponent.AddAxis("LeftHandSpecialAction",  new masInputAxisEvent(JoyAxis.TriggerLeft, 1f),  OnLeftHandSpecialAction);
         PlayerInputComponent.AddAxis("RightHandSpecialAction", new masInputAxisEvent(JoyAxis.TriggerRight, 1f), OnRightHandSpecialAction);
@@ -106,5 +148,10 @@ public partial class masPlayerController : Node
         masInputController InputController = masInput.GetInputController(masInputPlayerID.Player_0);
         InputController.AddInputComponent(PlayerInputComponent);
         InputController.AddInputComponent(PlayerCameraInputComponent);
+    }
+
+    public override void _Process(double delta)
+    {
+        ElapsedTime = (float)delta;
     }
 }
