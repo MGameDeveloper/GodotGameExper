@@ -5,11 +5,12 @@ public partial class masPlayerController : Node
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Input Events
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    [Signal] public delegate void OnMoveInputEventHandler(Vector3 Velocity);
-    [Signal] public delegate void OnSprintInputEventHandler(bool IsSprinting);
-    [Signal] public delegate void OnJumpInputEventHandler();
-    [Signal] public delegate void OnStepBackInputEventHandler();
-    [Signal] public delegate void OnRollInputEventHandler();
+    [Signal] public delegate void InputEvent_OnMoveEventHandler(Vector3 Velocity);
+    [Signal] public delegate void InputEvent_OnSprintEventHandler(bool IsSprinting);
+    [Signal] public delegate void InputEvent_OnJumpEventHandler();
+    [Signal] public delegate void InputEvent_OnCrouchEventHandler();
+    [Signal] public delegate void InputEvent_OnStepBackEventHandler();
+    [Signal] public delegate void InputEvent_OnRollEventHandler();
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -27,23 +28,23 @@ public partial class masPlayerController : Node
     private void MoveForward(float Value)
     {
         Velocity.Z = Value;
-        EmitSignal(SignalName.OnMoveInput, Velocity);
+        EmitSignal(SignalName.InputEvent_OnMove, Velocity);
     }
 
     private void MoveRight(float Value)
     {
         Velocity.X = Value; 
-        EmitSignal(SignalName.OnMoveInput, Velocity);
+        EmitSignal(SignalName.InputEvent_OnMove, Velocity);
     }
 
     private void OnBeginRun(float Value)
     {
         StartRunAccumulator += Value * ElapsedTime;
         if(StartRunAccumulator >= StartRunThreshold)
-            EmitSignal(SignalName.OnSprintInput, true);
+            EmitSignal(SignalName.InputEvent_OnSprint, true);
 
         if(Velocity.Length() == 0.0f)
-            EmitSignal(SignalName.OnStepBackInput);
+            EmitSignal(SignalName.InputEvent_OnStepBack);
     }
 
     private void OnEndRun()
@@ -51,18 +52,18 @@ public partial class masPlayerController : Node
         if(StartRunAccumulator >= StartRunThreshold)
         {
             StartRunAccumulator = 0f;
-            EmitSignal(SignalName.OnSprintInput, false);
+            EmitSignal(SignalName.InputEvent_OnSprint, false);
         }
         else
-            EmitSignal(SignalName.OnRollInput);
+            EmitSignal(SignalName.InputEvent_OnRoll);
     }
 
 	private void OnJump()
     {
-        EmitSignal(SignalName.OnJumpInput);
+        EmitSignal(SignalName.InputEvent_OnJump);
     }
 
-	private void OnCrouch()                     { }
+	private void OnCrouch()                     { EmitSignal(SignalName.InputEvent_OnCrouch); }
     private void OnStepBack()                   { }
     private void OnDodge()                      { }
     private void OnToggleLock()                 { }  

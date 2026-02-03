@@ -14,6 +14,9 @@ public partial class masAnimationController : Node
     private AnimationNodeStateMachinePlayback LocomotionFSM;
     private AnimationNodeStateMachinePlayback MovementFSM;
     private AnimationNodeStateMachinePlayback JumpFSM;
+    private AnimationNodeStateMachinePlayback CrouchFSM;
+    private AnimationNodeStateMachinePlayback MotionFSM;
+
 
     ///////////////////////////////////////////
     private bool  IsOnSprint = false;
@@ -28,12 +31,12 @@ public partial class masAnimationController : Node
         if(VelocityLength != 0f)
         {
             if(IsOnSprint)
-                MovementFSM.Travel("Sprint");
+                MotionFSM.Travel("Sprint");
             else
-                MovementFSM.Travel("Walk");
+                MotionFSM.Travel("Walk");
         }
         else
-            MovementFSM.Travel("Idle");
+            MotionFSM.Travel("Idle");
     }
 
     private void OnSprint(bool IsSprinting)           
@@ -52,15 +55,32 @@ public partial class masAnimationController : Node
         
         Callable FinishJump = Callable.From((StringName StateName) =>
         {
-            masDebug.Log(StateName, Colors.Cyan, 20f);
             if(StateName == "Jump_Land")
+            {
                 MovementComp.OnJumpEnd();
+                MotionFSM = MovementFSM;
+                masDebug.Log(StateName, Colors.Cyan, 20f);
+            }
         });
 
         if(!JumpFSM.IsConnected(AnimationNodeStateMachinePlayback.SignalName.StateFinished, FinishJump))
             JumpFSM.Connect(AnimationNodeStateMachinePlayback.SignalName.StateFinished, FinishJump, (uint)ConnectFlags.Persist);
     }
-    
+
+    private void OnCrouch(bool IsOnCrouch)
+    {
+        if(IsOnCrouch)
+        {
+            LocomotionFSM.Travel("CrouchFSM");
+            MotionFSM = CrouchFSM;
+        }
+        else
+        {
+            LocomotionFSM.Travel("MovementFSM");
+            MotionFSM = MovementFSM;
+        }
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     /// 
@@ -70,18 +90,21 @@ public partial class masAnimationController : Node
         LocomotionFSM = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/playback");
         MovementFSM   = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/MovementFSM/playback");
         JumpFSM       = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/JumpFSM/playback");
+        CrouchFSM     = (AnimationNodeStateMachinePlayback)AnimTree.Get("parameters/LocomotionFSM/CrouchFSM/playback");
+        MotionFSM     = MovementFSM;
 
-        MovementComp.OnJumpStart  += OnJumpStart;
-        MovementComp.OnJumpFinish += OnJumpFinish;
+        MovementComp.MovementEvent_OnJumpStart  += OnJumpStart;
+        MovementComp.MovementEvent_OnJumpFinish += OnJumpFinish;
+        MovementComp.MovementEvent_OnCrouch     += OnCrouch;
 
-        PlayerController.OnMoveInput   += OnVelocityChange;
-        PlayerController.OnSprintInput += OnSprint;
+        PlayerController.InputEvent_OnMove   += OnVelocityChange;
+        PlayerController.InputEvent_OnSprint += OnSprint;
         //PlayerController.OnStepBackInput ;
         //PlayerController.OnRollInput     ;
     }
 
     public override void _Process(double delta)
     {
-
+        
     }
 }
